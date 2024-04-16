@@ -7,7 +7,7 @@ Source : https://github.com/pyenv-win/pyenv-win
 
 ***
 
-## **PowerShell**
+### **PowerShell**
 
 The easiest way to install pyenv-win is to run the following installation command in a PowerShell terminal:
 
@@ -35,7 +35,7 @@ Installation is complete!
 
 ***
 
-## **Add System Settings**
+### **Add System Settings**
 
 It's a easy way to use PowerShell here
 
@@ -73,3 +73,29 @@ Installation is done. Hurray!
 Return to [README](../README.md#installation)
 
 ***
+
+## Poetry (Powershell)
+### Installation
+    (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
+
+If you have installed Python through the Microsoft Store, replace py with python in the command above.
+
+
+
+### Add Poetry to your PATH
+
+The installer creates a poetry wrapper in a well-known, platform-specific directory:
+
+    `$HOME/.local/bin` on Unix.
+    `%APPDATA%\Python\Scripts` on Windows.
+    `$POETRY_HOME/bin` if `$POETRY_HOME` is set.
+
+If this directory is not present in your $PATH, you can add it in order to invoke Poetry as poetry.
+
+Alternatively, the full path to the poetry binary can always be used:
+
+    `~/Library/Application Support/pypoetry/venv/bin/poetry` on MacOS.
+    `~/.local/share/pypoetry/venv/bin/poetry` on Linux/Unix.
+    `%APPDATA%\pypoetry\venv\Scripts\poetry` on Windows.
+    `$POETRY_HOME/venv/bin/poetry` if `$POETRY_HOME` is set.
+
