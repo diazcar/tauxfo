@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "tauxfo"
+version = "0.1.0"
+description = "automatization of operating rate"
+authors = ["diac"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
