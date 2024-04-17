@@ -8,7 +8,9 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.12"
 pandas = "^2.2.2"
-requests = "^2.31.0"
+requests = {extras = ["security"], version = "^2.31.0"}
+jupyter = "^1.0.0"
+datetime = "^5.5"
 
 
 [build-system]
