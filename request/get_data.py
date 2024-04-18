@@ -1,11 +1,12 @@
 import pandas as pd  # type: ignore
 import requests  # type: ignore
 import datetime as dt
+import os
 
 URL_DICT = {
     "data": "https://172.16.13.224:8443/dms-api/public/v2/data?",
     "sites": "https://172.16.13.224:8443/dms-api/public/v1/sites?",
-    "physicals": "https://172.16.13.224:8443/dms-api/public/v1/physicals?"
+    "physicals": "https://172.16.13.224:8443/dms-api/public/v1/physicals?",
 }
 
 DATA_KEYS = {
@@ -14,6 +15,10 @@ DATA_KEYS = {
     "physicals": "physicals",
 }
 
+GROUP_LIST = ["DIDON"]
+STATIONS_OUTFILE_DIC = {
+    "DIDON": "./data/stations_DIDON.csv"
+}
 
 def request_xr(
     fromtime: str = "",
@@ -21,7 +26,7 @@ def request_xr(
     folder: str = "",
     datatypes: str = "base",
     groups: str = "",
-    sites: str = ""
+    sites: str = "",
 ):
     """
     Get json objects from XR rest api
@@ -49,15 +54,32 @@ def request_xr(
         csv : csv file
             File in ../data directory
     """
-    url = (f"{URL_DICT[folder]}&"
-           f"from={fromtime}&"
-           f"to={totime}&"
-           f"sites={sites}&"
-           f"dataTypes={datatypes}&"
-           f"groups={groups}")
+    url = (
+        f"{URL_DICT[folder]}&"
+        f"from={fromtime}&"
+        f"to={totime}&"
+        f"sites={sites}&"
+        f"dataTypes={datatypes}&"
+        f"groups={groups}"
+    )
     # SECURITY RISK IF IN PRODUCTION - ADD CERTIFICATE SSL VERIFICATION
     data = requests.get(url, verify=False).json()
-    return pd.DataFrame(data[DATA_KEYS[folder]])
+    return data[DATA_KEYS[folder]]
+
+
+def build_csv_data(data, outfile):
+    if os.path.exists(outfile):
+        os.remove(outfile)
+    for i in range(len(data[:])):
+        if data[i]["sta"]["data"][0]["state"] != "N":
+            id = data[i]["id"]
+            df = pd.DataFrame(data[i]["sta"]["data"])
+            df["id"] = id
+            df.to_csv(outfile,
+                      mode='a',
+                      header=(not os.path.exists(outfile))
+                      )
+
 
 def data_time_window():
     """
@@ -68,20 +90,23 @@ def data_time_window():
     startdate : str
     endate : str
     """
-    y = dt.year.now()
-    m = dt.month.now()
+    data_now = dt.datetime.now()
+    y = data_now.strftime("%Y")
+    m = data_now.strftime("%m")
 
-    startdate = f"{year}-01-01T00:00:00Z"
-    enddate = f"{year}-{month}-01T00:00:00Z"
-    return(startdate,enddate)
+    startdate = f"{y}-01-01T00:00:00Z"
+    enddate = f"{y}-{m}-01T00:00:00Z"
+    return (startdate, enddate)
+
+
 if __name__ == "__main__":
 
     sites = pd.read_csv("./data/sites.csv", usecols=["id"])["id"].tolist()
-
     output_file_path = f"./data/{sites[0]}.csv"
-
-    if os.path.exists(output_file_path) is False:
-        (request_xr(
-                folder="data",
-                sites=sites[0]
-                ).to_csv(output_file_path))
+    startdate, enddate = data_time_window()
+    request = request_xr(folder="data",
+                         fromtime=startdate,
+                         totime=enddate,
+                         sites=sites[0],
+                         )
+    build_csv_data(request, output_file_path)

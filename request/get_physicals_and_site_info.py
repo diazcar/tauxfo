@@ -1,15 +1,11 @@
-from request.get_data import request_xr
-import os
-didon_sites_file_path = "./data/sites.csv"
-physical_file_path = "./data/physicals.csv"
+from request.get_data import request_xr, GROUP_LIST, STATIONS_OUTFILE_DIC
+import pandas as pd
 
-# Get DIDON especies+site names
-if os.path.exists(didon_sites_file_path) is False:
-    (request_xr(
-                folder="sites",
-                groups="DIDON"
-                ).to_csv(didon_sites_file_path))
+for group in GROUP_LIST:
+    sites_json = request_xr(folder="sites",
+                            groups=group
+                            )
+    pd.DataFrame(sites_json).to_csv(STATIONS_OUTFILE_DIC[group])
 
-if os.path.exists(physical_file_path) is False:
-    (request_xr(folder="physicals")
-        .to_csv(physical_file_path))
+physicals_json = request_xr(folder="physicals")
+pd.DataFrame(physicals_json).to_csv("./data/physicals.csv")
