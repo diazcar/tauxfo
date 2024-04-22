@@ -16,9 +16,10 @@ DATA_KEYS = {
 }
 
 GROUP_LIST = ["DIDON"]
-STATIONS_OUTFILE_DIC = {
-    "DIDON": "./data/stations_DIDON.csv"
+STATION_LIST_CSV = {
+    "DIDON": "stations_DIDON.csv"
 }
+
 
 def request_xr(
     fromtime: str = "",
@@ -71,11 +72,20 @@ def build_csv_data(data, outfile):
     if os.path.exists(outfile):
         os.remove(outfile)
     for i in range(len(data[:])):
-        if data[i]["sta"]["data"][0]["state"] != "N":
-            id = data[i]["id"]
-            df = pd.DataFrame(data[i]["sta"]["data"])
-            df["id"] = id
-            df.to_csv(outfile,
+        header_df = pd.DataFrame(columns=['date',
+                                          'id',
+                                          'value',
+                                          'unit',
+                                          'state',
+                                          'validated']
+                                 )
+        df = pd.DataFrame(data[i]["sta"]["data"])
+        df["id"] = data[i]["id"]
+        df["unit"] = data[i]["sta"]['unit']
+        out_df = pd.concat([header_df, df],
+                           ignore_index=True,
+                           sort=False)
+        out_df.to_csv(outfile,
                       mode='a',
                       header=(not os.path.exists(outfile))
                       )
@@ -100,13 +110,18 @@ def data_time_window():
 
 
 if __name__ == "__main__":
-
-    sites = pd.read_csv("./data/sites.csv", usecols=["id"])["id"].tolist()
-    output_file_path = f"./data/{sites[0]}.csv"
-    startdate, enddate = data_time_window()
-    request = request_xr(folder="data",
-                         fromtime=startdate,
-                         totime=enddate,
-                         sites=sites[0],
-                         )
-    build_csv_data(request, output_file_path)
+    for group in GROUP_LIST:
+        if os.path.exists(f'./data/{group}') is False:
+            os.mkdir(f'./data/{group}')
+        sites = pd.read_csv(f"./data/{STATION_LIST_CSV[group]}",
+                            usecols=["id"])["id"].tolist()
+        for s in sites:
+            # add loop for every site
+            output_file_path = f"./data/{group}/{s}.csv"
+            startdate, enddate = data_time_window()
+            request = request_xr(folder="data",
+                                 fromtime=startdate,
+                                 totime=enddate,
+                                 sites=s,
+                                 )
+            build_csv_data(request, output_file_path)
