@@ -92,7 +92,6 @@ def compute_rates(
     I = data[data["state"] == "I"]["state"].count()
 
     month_count = data["id"].count()
-    print(month_count)
     total_count = month_count + acc_count
 
     month_disponibility_rate = (A + O + R + P + C + Z + M) / month_count
@@ -122,12 +121,12 @@ def compute_rates(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="""
-                                     This script compute :
-                                        -   Monthly operational rates
-                                        -   Monthly disponibility rate
-                                        -   Accumulated lost rate
-                                        -   Accumulated lost rate by
-                                            indisponibility
+                                     This script compute :\n
+                                        -   Monthly operational rates\n
+                                        -   Monthly disponibility rate\n
+                                        -   Accumulated lost rate\n
+                                        -   Accumulated lost rate by\n
+                                            indisponibility\n
                                      This, for a group of measuring stations.
                                      """,
     )
@@ -157,6 +156,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-g", "--group",
+        help="Station group to process",
         type=list_of_strings,
         default=GROUP_LIST,
         metavar="\b",
@@ -171,17 +171,27 @@ if __name__ == "__main__":
         "-sl",
         "--station_list_path",
         type=str,
-        help="path/to/folder/stations_group.csv",
+        help="""path/to/folder/stations_group.csv 
+        from get_physicals_and_site_info.py""",
         default="./data",
     )
     args = parser.parse_args()
 
-    for group in GROUP_LIST:
+    for group in args.group:
         print(f"Processing sites of {group} ...")
         name_list = f"{args.station_list_path}/{STATION_LIST_CSV[group]}"
         site_list = pd.read_csv(name_list, usecols=["id"])["id"].tolist()
 
-        for site in tqdm(site_list, leave=False):
+        out_dir = f"{args.outdir}/rates/{args.year}/{group}"
+        if os.path.exists(out_dir):
+            for file in os.listdir(out_dir):
+                os.remove(os.path.join(out_dir, file))
+        else:
+            os.makedirs(out_dir)
+
+        for site in tqdm(site_list,
+                         leave=False):
+
             csv_file = f"{args.indir}/{args.year}/{group}/{site}.csv"
             data = pd.read_csv(
                 csv_file,
@@ -189,13 +199,11 @@ if __name__ == "__main__":
                 parse_dates=["date"]
                 )
 
-            for n in range(4):
-                out_dir = f"{args.outdir}/rates/{args.year}/{group}"
-                if os.path.exists(out_dir) is False:
-                    os.makedirs(out_dir)
-
             ids = data["id"].unique()
-            for id in ids:
+            for id in tqdm(ids,
+                           desc=site,
+                           leave=False):
+
                 rate_dfs = [
                     pd.DataFrame(),
                     pd.DataFrame(),
@@ -207,8 +215,8 @@ if __name__ == "__main__":
                 acc_indisponibility_lost = 0
 
                 id_data = data[data["id"] == id]
-                
-                for m in tqdm(range(1, 13), desc=f"Site: {site} | id: {id}"):
+
+                for m in range(1, 13):
                     month_name = calendar.month_name[m]
                     month_data = id_data[id_data["date"].dt.month == m]
 

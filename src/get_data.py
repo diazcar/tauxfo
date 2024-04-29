@@ -6,7 +6,7 @@ import datetime as dt
 import os
 import argparse
 from tqdm import tqdm
-
+import sys 
 URL_DICT = {
     "data": "https://172.16.13.224:8443/dms-api/public/v2/data?",
     "sites": "https://172.16.13.224:8443/dms-api/public/v1/sites?",
@@ -81,15 +81,9 @@ def request_xr(
 
 
 def build_csv_data(data, outfile):
-    if os.path.exists(outfile):
-        os.remove(outfile)
     for i in range(len(data[:])):
-        header_df = pd.DataFrame(columns=['date',
-                                          'id',
-                                          'value',
-                                          'unit',
-                                          'state',
-                                          'validated']
+        cols = ['date', 'id', 'value', 'unit', 'state', 'validated']
+        header_df = pd.DataFrame(columns=cols
                                  )
         df = pd.DataFrame(data[i]["sta"]["data"])
         df["id"] = data[i]["id"]
@@ -97,8 +91,13 @@ def build_csv_data(data, outfile):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning)
             out_df = pd.concat([header_df, df],
+                               join="inner",
                                ignore_index=True,
                                sort=False)
+            for col in cols:
+                if col not in out_df.columns:
+                    out_df.insert(2, col, None)
+
         out_df.to_csv(outfile,
                       mode='a',
                       header=(not os.path.exists(outfile))
@@ -123,16 +122,15 @@ def data_time_window():
     return (startdate, enddate)
 
 
-def get_month_datetimes(start_date):
+def get_month_datetimes(start_date, month):
     start_dt = dt.datetime.strptime(start_date,
                                     "%Y-%m-%dT%H:%M:%SZ")
     year = int(start_dt.strftime('%Y'))
-    month = int(start_dt.strftime('%m'))
     days = monthrange(year, month)[1]
     start_month_date = f'{year}-{str(month).zfill(2)}-01T00:00:00Z'
     end_month_date = f'{year}-{str(month).zfill(2)}-{days}T23:45:00Z'
     if month == 12:
-        end_month_date = f'{year+1}-01-31T:00:00:00Z'
+        end_month_date = f'{year+1}-01-01T00:00:00Z'
     return (start_month_date, end_month_date)
 
 
@@ -156,7 +154,8 @@ if __name__ == "__main__":
                         type=int,
                         help="""
                         Year to retreve data
-                        """)
+                        """,
+                        metavar="\b")
     parser.add_argument("-sd",
                         "--startdate",
                         type=str,
@@ -173,7 +172,7 @@ if __name__ == "__main__":
                         """,
                         default=data_time_window()[1],
                         metavar="\b")
-    parser.add_argument("-g", "--group_list",
+    parser.add_argument("-g", "--group",
                         type=list_of_strings,
                         help="Stations group",
                         default=GROUP_LIST,
@@ -187,9 +186,37 @@ if __name__ == "__main__":
                         "--station_list_path",
                         type=str,
                         help="path/to/folder/stations_group.csv",
-                        default="./data")
+                        default="./data",
+                        metavar="\b")
 
     args = parser.parse_args()
+
+    if args.station:
+        sites = args.station
+        for s in tqdm(sites, desc="SITES"):
+            output_file_path = f"{args.outdir}/{s}.csv"
+            if args.year:
+                end_month = 12
+                start_date = f"{args.year}-01-01T00:00:00Z"
+            else:
+                start_date = args.startdate
+                end_dto = dt.datetime.strptime(args.enddate,
+                                               "%Y-%m-%dT%H:%M:%SZ")
+                end_month = int(end_dto.strftime('%m'))
+
+            if os.path.exists(output_file_path):
+                os.remove(output_file_path)
+            for month in tqdm(range(1, end_month+1),
+                              desc=f"Retreving Data for {s}",
+                              leave=False):
+                sd, ed = get_month_datetimes(start_date, month)
+                request = request_xr(folder="data",
+                                     fromtime=sd,
+                                     totime=ed,
+                                     sites=s,
+                                     )
+                build_csv_data(request, output_file_path)
+        sys.exit("Done.")
 
     for group in args.group_list:
         print(f"Retreving {group} group ...")
@@ -200,19 +227,16 @@ if __name__ == "__main__":
         if os.path.exists(f"{args.outdir}/{year_folder}/{group}") is False:
             os.makedirs(f"{args.outdir}/{year_folder}/{group}")
 
-        if args.station:
-            sites = [args.station]
-        else:
-            sites_file_path = os.path.join(
-                args.station_list_path,
-                STATION_LIST_CSV[group]
-                )
-            sites = pd.read_csv(
-                sites_file_path,
-                usecols=["id"]
-                )["id"].tolist()
-        for s in sites:
-            i = i + 1
+        sites_file_path = os.path.join(
+            args.station_list_path,
+            STATION_LIST_CSV[group]
+            )
+        sites = pd.read_csv(
+            sites_file_path,
+            usecols=["id"]
+            )["id"].tolist()
+
+        for s in tqdm(sites, desc="SITES"):
             output_file_path = f"{args.outdir}/{year_folder}/{group}/{s}.csv"
             if args.year:
                 end_month = 12
@@ -222,14 +246,16 @@ if __name__ == "__main__":
                 end_dto = dt.datetime.strptime(args.enddate,
                                                "%Y-%m-%dT%H:%M:%SZ")
                 end_month = int(end_dto.strftime('%m'))
-
+            if os.path.exists(output_file_path):
+                os.remove(output_file_path)
             for month in tqdm(range(1, end_month+1),
                               desc=f"Retreving Data for {s}",
                               leave=False):
-                sd, ed = get_month_datetimes(start_date)
+                sd, ed = get_month_datetimes(start_date, month)
                 request = request_xr(folder="data",
                                      fromtime=sd,
                                      totime=ed,
                                      sites=s,
                                      )
                 build_csv_data(request, output_file_path)
+    print("Done.")
