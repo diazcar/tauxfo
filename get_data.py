@@ -1,142 +1,22 @@
-from calendar import monthrange
-import warnings
-import pandas as pd  # type: ignore
-import requests  # type: ignore
+import pandas as pd
 import datetime as dt
 import os
 import argparse
 from tqdm import tqdm
 import sys
 
-URL_DICT = {
-    "data": "https://172.16.13.224:8443/dms-api/public/v2/data?",
-    "sites": "https://172.16.13.224:8443/dms-api/public/v1/sites?",
-    "physicals": "https://172.16.13.224:8443/dms-api/public/v1/physicals?",
-}
-
-DATA_KEYS = {
-    "data": "data",
-    "sites": "sites",
-    "physicals": "physicals",
-}
-
-GROUP_LIST = ["DIDON", "V_NICE", "V_MARS", "V_MART"]
-
-STATION_LIST_CSV = {
-    "DIDON": "stations_DIDON.csv",
-    "V_NICE": "stations_V_NICE.csv",
-    "V_MARS": "stations_V_MARS.csv",
-    "V_MART": "stations_V_MART.csv",
-
-}
-
-
-def request_xr(
-    fromtime: str = "",
-    totime: str = "",
-    folder: str = "",
-    datatypes: str = "base",
-    groups: str = "",
-    sites: str = "",
-):
-    """
-    Get json objects from XR rest api
-
-    input :
-    -------
-        fromtime : str
-            Start time  in YYYY-MM-DDThh:mm:ssZ format
-        totime : str
-            End time  in YYYY-MM-DDThh:mm:ssZ format
-        folder : str
-            Url string to request XR rest api
-            Default = "data"
-        dataTypes : str,
-            Time mean in base(15min), hour, day, month
-            Default = "base"
-        groups : str
-            Site groupes
-            Default = "DIDON"
-        sites : str
-            site or list of sites to retrive
-            Default = "" (all sistes)
-    return :
-    --------
-        csv : csv file
-            File in ../data directory
-    """
-    url = (
-        f"{URL_DICT[folder]}&"
-        f"from={fromtime}&"
-        f"to={totime}&"
-        f"sites={sites}&"
-        f"dataTypes={datatypes}&"
-        f"groups={groups}"
+from src.dictionaries import (
+    GROUP_LIST,
+    STATION_LIST_CSV,
     )
 
-    # SECURITY RISK IF IN PRODUCTION - ADD CERTIFICATE SSL VERIFICATION
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        data = requests.get(url, verify=False).json()
-    return data[DATA_KEYS[folder]]
-
-
-def build_csv_data(data, outfile):
-    for i in range(len(data[:])):
-        cols = ['date', 'id', 'value', 'unit', 'state', 'validated']
-        header_df = pd.DataFrame(columns=cols
-                                 )
-        df = pd.DataFrame(data[i]["sta"]["data"])
-        df["id"] = data[i]["id"]
-        df["unit"] = data[i]["sta"]['unit']['id']
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=FutureWarning)
-            out_df = pd.concat([header_df, df],
-                               join="inner",
-                               ignore_index=True,
-                               sort=False)
-            for col in cols:
-                if col not in out_df.columns:
-                    out_df.insert(2, col, None)
-
-        out_df.to_csv(outfile,
-                      mode='a',
-                      header=(not os.path.exists(outfile))
-                      )
-
-
-def data_time_window():
-    """
-    Select time window from month[0] to month[n-1]
-
-    return :
-    ------
-    startdate : str
-    endate : str
-    """
-    data_now = dt.datetime.now()
-    y = data_now.strftime("%Y")
-    m = data_now.strftime("%m")
-
-    startdate = f"{y}-01-01T00:00:00Z"
-    enddate = f"{y}-{m}-01T00:00:00Z"
-    return (startdate, enddate)
-
-
-def get_month_datetimes(start_date, month):
-    start_dt = dt.datetime.strptime(start_date,
-                                    "%Y-%m-%dT%H:%M:%SZ")
-    year = int(start_dt.strftime('%Y'))
-    days = monthrange(year, month)[1]
-    start_month_date = f'{year}-{str(month).zfill(2)}-01T00:00:00Z'
-    end_month_date = f'{year}-{str(month).zfill(2)}-{days}T23:45:00Z'
-    if month == 12:
-        end_month_date = f'{year+1}-01-01T00:00:00Z'
-    return (start_month_date, end_month_date)
-
-
-def list_of_strings(arg):
-    return arg.split(',')
+from src.fonctions import (
+    build_csv_data,
+    data_time_window,
+    get_month_datetimes,
+    list_of_strings,
+    request_xr,
+)
 
 
 if __name__ == "__main__":
@@ -189,8 +69,20 @@ if __name__ == "__main__":
                         help="path/to/folder/stations_group.csv",
                         default="./data",
                         metavar="\b")
+    parser.add_argument("-clean",
+                        type=str,
+                        help="clean retrived data by year from Xair rest api",
+                        default="./data",
+                        metavar="\b")
 
     args = parser.parse_args()
+
+    if args.clean:
+        if args.year:
+            print("ca marche")
+            sys.exit(f"Directory {args.clean}/{args.year} was cleaned")
+        else:
+            sys.exit("Or provide year by setting [-y] option ")
 
     if args.station:
         sites = args.station

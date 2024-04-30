@@ -2,133 +2,22 @@ import pandas as pd
 import calendar
 import os
 import argparse
-from datetime import datetime
 from tqdm import tqdm
-from scipy import stats
-import numpy as np
 
-from src.get_data import GROUP_LIST, STATION_LIST_CSV, list_of_strings
+from src.dictionaries import (
+    RATE_FILE_NAMES_DIC,
+    RATE_VAR_DIC,
+    RATE_VARS,
+    YEAR_NOW,
+    GROUP_LIST,
+    STATION_LIST_CSV,
+    )
 
-RATE_VARS = ["tauxfo", "dispo", "pert", "pert_indi", "max"]
-
-RATE_FILE_NAMES_DIC = {
-    "tauxfo": "tauxfo.csv",
-    "pert": "pert.csv",
-    "dispo": "dispo.csv",
-    "pert_indi": "pert_indi.csv",
-    "max": "monthly_max.csv",
-}
-
-RATE_VAR_DIC = {
-    "tauxfo": "month_operational_rate",
-    "dispo": "month_disponibility_rate",
-    "pert": "overall_lost_rate",
-    "pert_indi": "overall_indisponibility_lost",
-    "max": "max",
-}
-
-state_code = [
-    "A",
-    "O",
-    "R",
-    "P",
-    "W",
-    "N",
-    "Z",
-    "C",
-    "D",
-    "M",
-    "i",
-]
-
-YEAR_NOW = int(datetime.now().strftime("%Y"))
-
-
-def compute_rates(
-    data: pd.DataFrame,
-    acc_count: int = 2,
-    acc_lost: int = 0,
-    acc_indisponibility_lost: int = 0,
-):
-    """
-    This fonction compute :
-        - Operational rate (Tauxfo)
-        - Disponibility rate (Dispo)
-        - Lost rate (Perte)
-        - Los rate du to the indisponibility (Perte_indi)
-
-    INPUTS
-    ------
-        data : dataframe
-            Dataframe of a monthly data with state code of measuring stations
-        acc_count : int
-            last month count of validated data
-        acc_lost : int
-            las month count of lost data
-        acc_indisponibility_lost : int
-            Las month count of lost data du to indisponibility
-
-    RETURN
-    ------
-        month_rates : dict
-            Dictionary of monthly operational and disponibility rates and
-            accumulated lost rates over the past months. As:
-                {'month_disponibility_rate': int,
-                'month_operational_rate': int,
-                'overall_lost_rate': int,
-                'overall_indisponibility_lost': int}
-        total_count-1 : int
-            validated accumulated count over the months
-        total_count_lost : int
-            accumulated lost count over the months
-        total_indisponibility_lost : int
-            accumulated lost du to indi. count over the months
-    """
-    A = data[data["state"] == "A"]["state"].count()
-    O = data[data["state"] == "O"]["state"].count()
-    R = data[data["state"] == "R"]["state"].count()
-    P = data[data["state"] == "P"]["state"].count()
-    N = data[data["state"] == "N"]["state"].count()
-    Z = data[data["state"] == "Z"]["state"].count()
-    C = data[data["state"] == "C"]["state"].count()
-    D = data[data["state"] == "D"]["state"].count()
-    M = data[data["state"] == "M"]["state"].count()
-    I = data[data["state"] == "I"]["state"].count()
-
-    month_count = data["id"].count()
-    total_count = month_count + acc_count
-
-    month_disponibility_rate = (A + O + R + P + C + Z + M) / month_count
-    valid_data = A + O + R + P
-    month_operational_rate = valid_data / month_count
-
-    total_count_lost = acc_lost + C + Z + M + D + N + I
-    overall_lost_rate = total_count_lost / 8760
-
-    total_indisponibility_lost = acc_indisponibility_lost + D + N + I
-    overall_indisponibility_lost = total_indisponibility_lost / 3504
-
-    month_rates = {
-        "month_disponibility_rate": [month_disponibility_rate],
-        "month_operational_rate": [month_operational_rate],
-        "overall_lost_rate": [overall_lost_rate],
-        "overall_indisponibility_lost": [overall_indisponibility_lost],
-        "max": [data[data['state'].isin(['A', 'O', 'R'])]['value'].max()],
-    }
-
-    return (
-        month_rates,
-        total_count - 1,
-        total_count_lost,
-        total_indisponibility_lost)
-
-
-def get_outliers(in_data, threshold=1.5):
-    data = in_data[(in_data['state'].isin(['A', 'O', 'R']))]
-    z = np.abs(stats.zscore(data['value']))
-    outliers = data[z > threshold]
-    return (outliers)
-
+from src.fonctions import (
+    compute_rates,
+    get_outliers,
+    list_of_strings,
+)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

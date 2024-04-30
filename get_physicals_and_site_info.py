@@ -1,4 +1,5 @@
-from src.get_data import request_xr, GROUP_LIST, STATION_LIST_CSV
+from src.fonctions import request_xr
+from src.dictionaries import GROUP_LIST, STATION_LIST_CSV
 import pandas as pd
 
 for group in GROUP_LIST:
