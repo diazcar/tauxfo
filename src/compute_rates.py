@@ -4,16 +4,19 @@ import os
 import argparse
 from datetime import datetime
 from tqdm import tqdm
+from scipy import stats
+import numpy as np
 
 from src.get_data import GROUP_LIST, STATION_LIST_CSV, list_of_strings
 
-RATE_VARS = ["tauxfo", "dispo", "pert", "pert_indi"]
+RATE_VARS = ["tauxfo", "dispo", "pert", "pert_indi", "max"]
 
 RATE_FILE_NAMES_DIC = {
     "tauxfo": "tauxfo.csv",
     "pert": "pert.csv",
     "dispo": "dispo.csv",
     "pert_indi": "pert_indi.csv",
+    "max": "monthly_max.csv",
 }
 
 RATE_VAR_DIC = {
@@ -21,6 +24,7 @@ RATE_VAR_DIC = {
     "dispo": "month_disponibility_rate",
     "pert": "overall_lost_rate",
     "pert_indi": "overall_indisponibility_lost",
+    "max": "max",
 }
 
 state_code = [
@@ -109,6 +113,7 @@ def compute_rates(
         "month_operational_rate": [month_operational_rate],
         "overall_lost_rate": [overall_lost_rate],
         "overall_indisponibility_lost": [overall_indisponibility_lost],
+        "max": [data[data['state'].isin(['A', 'O', 'R'])]['value'].max()],
     }
 
     return (
@@ -116,6 +121,13 @@ def compute_rates(
         total_count - 1,
         total_count_lost,
         total_indisponibility_lost)
+
+
+def get_outliers(in_data, threshold=1.5):
+    data = in_data[(in_data['state'].isin(['A', 'O', 'R']))]
+    z = np.abs(stats.zscore(data['value']))
+    outliers = data[z > threshold]
+    return (outliers)
 
 
 if __name__ == "__main__":
@@ -171,7 +183,7 @@ if __name__ == "__main__":
         "-sl",
         "--station_list_path",
         type=str,
-        help="""path/to/folder/stations_group.csv 
+        help="""path/to/folder/stations_group.csv
         from get_physicals_and_site_info.py""",
         default="./data",
     )
@@ -198,17 +210,30 @@ if __name__ == "__main__":
                 low_memory=False,
                 parse_dates=["date"]
                 )
-
+            get_outliers(
+                    data,
+                    threshold=5
+                    ).to_csv(f"{out_dir}/outliers.csv",
+                             mode="a",
+                             header=(not os.path.exists(
+                                 f"{out_dir}/outliers.csv")
+                                 )
+                             )
             ids = data["id"].unique()
             for id in tqdm(ids,
                            desc=site,
                            leave=False):
-
+                model_df = pd.DataFrame(
+                        [{"id": id,
+                          "site": site,
+                          "polluant": id.split(site[:3], 2)[0]}]
+                )
                 rate_dfs = [
-                    pd.DataFrame(),
-                    pd.DataFrame(),
-                    pd.DataFrame(),
-                    pd.DataFrame(),
+                    model_df.copy(deep=True),
+                    model_df.copy(deep=True),
+                    model_df.copy(deep=True),
+                    model_df.copy(deep=True),
+                    model_df.copy(deep=True),
                 ]
                 acc_count = 2
                 acc_lost = 0
@@ -234,8 +259,8 @@ if __name__ == "__main__":
                     acc_lost = total_count_lost
                     acc_indisponibility_lost = total_indisponibility_lost
 
-                    for n in range(4):
-                        rate_dfs[n]["id"] = id
+                    for n in range(5):
+
                         rate_dfs[n] = pd.concat(
                             [
                                 rate_dfs[n],
@@ -249,7 +274,21 @@ if __name__ == "__main__":
                             ],
                             axis=1,
                         )
-                for n in range(4):
+                for n in range(5):
+                    if RATE_VARS[n] == "dispo" or RATE_VARS[n] == "tauxfo":
+                        rate_dfs[n][args.year] = (
+                            rate_dfs[n][calendar.month_name[1:]].sum(axis=1)/12
+                            )
+                    if RATE_VARS[n] == "pert":
+                        if rate_dfs[n][calendar.month_name[12]].values > 0.25:
+                            rate_dfs[n].to_csv(
+                                f"{out_dir}/pert_repport.csv",
+                                mode="a",
+                                header=(not os.path.exists(
+                                    f"{out_dir}/pert_repport.csv"
+                                        )
+                                    ),
+                            )
                     file_name = RATE_FILE_NAMES_DIC[RATE_VARS[n]]
                     out_file_to_append = f"{out_dir}/{file_name}"
                     rate_dfs[n].to_csv(
@@ -257,3 +296,4 @@ if __name__ == "__main__":
                         mode="a",
                         header=(not os.path.exists(out_file_to_append))
                     )
+    print("DONE")

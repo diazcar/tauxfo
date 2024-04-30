@@ -6,7 +6,8 @@ import datetime as dt
 import os
 import argparse
 from tqdm import tqdm
-import sys 
+import sys
+
 URL_DICT = {
     "data": "https://172.16.13.224:8443/dms-api/public/v2/data?",
     "sites": "https://172.16.13.224:8443/dms-api/public/v1/sites?",
