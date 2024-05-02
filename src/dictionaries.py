@@ -14,14 +14,6 @@ DATA_KEYS = {
 
 GROUP_LIST = ["DIDON", "V_NICE", "V_MARS", "V_MART"]
 
-STATION_LIST_CSV = {
-    "DIDON": "stations_DIDON.csv",
-    "V_NICE": "stations_V_NICE.csv",
-    "V_MARS": "stations_V_MARS.csv",
-    "V_MART": "stations_V_MART.csv",
-
-}
-
 RATE_VARS = ["tauxfo", "dispo", "pert", "pert_indi", "max"]
 
 RATE_FILE_NAMES_DIC = {

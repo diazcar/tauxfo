@@ -1,5 +1,6 @@
 from calendar import monthrange
 import os
+import sys
 import warnings
 import numpy as np
 import pandas as pd
@@ -15,6 +16,7 @@ from dictionaries import (
 
 
 def compute_rates(
+    site: str,
     data: pd.DataFrame,
     acc_count: int = 2,
     acc_lost: int = 0,
@@ -29,6 +31,8 @@ def compute_rates(
 
     INPUTS
     ------
+        site : str
+            Processing site
         data : dataframe
             Dataframe of a monthly data with state code of measuring stations
         acc_count : int
@@ -66,6 +70,8 @@ def compute_rates(
     I_ = data[data["state"] == "I"]["state"].count()
 
     month_count = data["id"].count()
+    if month_count == 0:
+        sys.exit(f"Corrupted or incomplete CSV file for site : {site}")
     total_count = month_count + acc_count
 
     month_disponibility_rate = (A + O_ + R + P + C + Z + M) / month_count
