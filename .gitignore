@@ -4,6 +4,7 @@ notebook/*
 rates/*
 local
 tauxfo_sta_v2_06-05-2024.zip
+tauxfo.yml
 # Files to keep
 !.gitkeep
 
