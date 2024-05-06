@@ -1,15 +1,17 @@
 from datetime import datetime
 
 URL_DICT = {
-    "data": "https://172.16.13.224:8443/dms-api/public/v2/data?",
+    "data": "https://172.16.13.224:8443/dms-api/public/v1/data?",
     "sites": "https://172.16.13.224:8443/dms-api/public/v1/sites?",
     "physicals": "https://172.16.13.224:8443/dms-api/public/v1/physicals?",
+    "measures": "https://172.16.13.224:8443/dms-api/public/v1/measures?",
 }
 
 DATA_KEYS = {
     "data": "data",
     "sites": "sites",
     "physicals": "physicals",
+    "measures": "measures"
 }
 
 GROUP_LIST = ["DIDON", "V_NICE", "V_MARS", "V_MART"]

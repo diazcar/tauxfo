@@ -1,4 +1,6 @@
+import calendar
 from calendar import monthrange
+from datetime import date
 import os
 import sys
 import warnings
@@ -74,9 +76,10 @@ def compute_rates(
         sys.exit(f"Corrupted or incomplete CSV file for site : {site}")
     total_count = month_count + acc_count
 
-    month_disponibility_rate = (A + O_ + R + P + C + Z + M) / month_count
-    valid_data = A + O_ + R + P
-    month_operational_rate = valid_data / month_count
+    disponibility_count = A + O_ + R + P + C + Z + M
+    month_disponibility_rate = disponibility_count / month_count
+    valid_count = A + O_ + R + P
+    month_operational_rate = valid_count / month_count
 
     total_count_lost = acc_lost + C + Z + M + D + N + I_
     overall_lost_rate = total_count_lost / 8760
@@ -96,7 +99,9 @@ def compute_rates(
         month_rates,
         total_count - 1,
         total_count_lost,
-        total_indisponibility_lost)
+        total_indisponibility_lost,
+        disponibility_count,
+        valid_count)
 
 
 def get_outliers(in_data, threshold=1.5):
@@ -113,6 +118,7 @@ def request_xr(
     datatypes: str = "base",
     groups: str = "",
     sites: str = "",
+    measures: str = ""
 ):
     """
     Get json objects from XR rest api
@@ -135,6 +141,9 @@ def request_xr(
         sites : str
             site or list of sites to retrive
             Default = "" (all sistes)
+        measures : str
+            list of measure ids
+            Default : str
     return :
     --------
         csv : csv file
@@ -146,9 +155,9 @@ def request_xr(
         f"to={totime}&"
         f"sites={sites}&"
         f"dataTypes={datatypes}&"
-        f"groups={groups}"
+        f"groups={groups}&"
+        f"measures={measures}"
     )
-
     # SECURITY RISK IF IN PRODUCTION - ADD CERTIFICATE SSL VERIFICATION
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
@@ -158,12 +167,11 @@ def request_xr(
 
 def build_csv_data(data, outfile):
     for i in range(len(data[:])):
-        cols = ['date', 'id', 'value', 'unit', 'state', 'validated']
+        cols = ['date', 'id', 'value', 'state', 'validated']
         header_df = pd.DataFrame(columns=cols
                                  )
-        df = pd.DataFrame(data[i]["sta"]["data"])
+        df = pd.DataFrame(data[i]["base"])
         df["id"] = data[i]["id"]
-        df["unit"] = data[i]["sta"]['unit']['id']
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning)
             out_df = pd.concat([header_df, df],
@@ -212,3 +220,25 @@ def get_month_datetimes(start_date, month):
 
 def list_of_strings(arg):
     return arg.split(',')
+
+
+def current_days(year, month):
+    if month == 12:
+        return (365 + calendar.isleap(year))
+    else:
+        first_date_of_year = date(year, 1, 1)
+        current_date = date(year, month, monthrange(year, month)[1])
+        delta = first_date_of_year - current_date
+        return ((delta).days)
+
+def test_path(path, mode):
+
+    if mode == "mkdir":
+        if os.path.exists(path) is False:
+            os.mkdir(path)
+    if mode == "makedirs":
+        if os.path.exists(path) is False:
+            os.makedirs(path)
+    if mode == "remove_file":
+        if os.path.exists(path):
+            os.remove(path)

@@ -39,5 +39,9 @@ and a list of sites by GROUPS
                                 )
         pd.DataFrame(sites_json).to_csv(f"{out_dir_data}/data/stations_{group}.csv")
 
+        measures_json = request_xr(folder="measures",
+                                   groups=group,)
+        pd.DataFrame(measures_json).to_csv(f"{out_dir_data}/data/measures_{group}.csv")
+
     physicals_json = request_xr(folder="physicals")
     pd.DataFrame(physicals_json).to_csv(f"{out_dir_data}/data/physicals.csv")
