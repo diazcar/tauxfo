@@ -3,6 +3,7 @@ data/*
 notebook/*
 rates/*
 local
+tauxfo_sta_v2_06-05-2024.zip
 # Files to keep
 !.gitkeep
 
