@@ -81,7 +81,7 @@ from Xair rest api
             year_folder = args.startdate.split("-", 1)[0]
 
         out_path = f"{args.outdir}/data/{year_folder}/{group}"
-        test_path(out_path, "mkdir")
+        test_path(out_path, "makedirs")
 
         sites_file_path = os.path.join(
             args.station_list_path,

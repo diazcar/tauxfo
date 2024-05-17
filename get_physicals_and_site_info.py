@@ -29,19 +29,19 @@ and a list of sites by GROUPS
 
     args = parser.parse_args()
 
-    out_dir_data = f"{args.outdir}"
+    out_dir_data = f"{args.outdir}/data"
     if os.path.exists(out_dir_data) is False:
-        os.makedirs(f"{out_dir_data}/data")
+        os.makedirs(f"{out_dir_data}")
 
     for group in args.group:
         sites_json = request_xr(folder="sites",
                                 groups=group
                                 )
-        pd.DataFrame(sites_json).to_csv(f"{out_dir_data}/data/stations_{group}.csv")
+        pd.DataFrame(sites_json).to_csv(f"{out_dir_data}/stations_{group}.csv")
 
         measures_json = request_xr(folder="measures",
                                    groups=group,)
-        pd.DataFrame(measures_json).to_csv(f"{out_dir_data}/data/measures_{group}.csv")
+        pd.DataFrame(measures_json).to_csv(f"{out_dir_data}/measures_{group}.csv")
 
     physicals_json = request_xr(folder="physicals")
-    pd.DataFrame(physicals_json).to_csv(f"{out_dir_data}/data/physicals.csv")
+    pd.DataFrame(physicals_json).to_csv(f"{out_dir_data}/physicals.csv")
