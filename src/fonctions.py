@@ -228,7 +228,7 @@ def current_days(year, month):
     else:
         first_date_of_year = date(year, 1, 1)
         current_date = date(year, month, monthrange(year, month)[1])
-        delta = first_date_of_year - current_date
+        delta = abs(first_date_of_year - current_date)
         return ((delta).days)
 
 def test_path(path, mode):
