@@ -1,0 +1,11 @@
+Default use of tauxfo application:
+
+	>conda activate tauxfo
+	>python -m get_physicals_and_site_info
+	>python -m get_data
+	>python -m compute_rates
+
+To clean default data folder
+
+	>python -m compute_rates -clean -y 2024
+
