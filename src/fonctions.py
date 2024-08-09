@@ -231,6 +231,7 @@ def current_days(year, month):
         delta = abs(first_date_of_year - current_date)
         return ((delta).days)
 
+
 def test_path(path, mode):
 
     if mode == "mkdir":
